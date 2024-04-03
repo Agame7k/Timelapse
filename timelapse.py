@@ -4,6 +4,7 @@ import datetime
 import tkinter as tk
 import os
 import threading
+from PIL import Image, ImageTk
 
 def capture_frames(interval=10, camera_port=0):
     cap = cv2.VideoCapture(camera_port)
@@ -37,26 +38,27 @@ def list_files(listbox):
 
 def create_gui():
     root = tk.Tk()
-    root.title("Video Files")
+    root.title("Image Files")
 
     listbox = tk.Listbox(root)
     listbox.pack(pady=15)
 
-    # Create a text widget to display the file contents
-    text = tk.Text(root)
-    text.pack()
+    # Create a label to display the image
+    image_label = tk.Label(root)
+    image_label.pack()
 
-    def show_file_contents(event):
+    def show_image(event):
         # Get the selected file
         file = listbox.get(listbox.curselection())
 
-        # Open the file and display its contents
-        with open('Videos/' + file, 'r') as f:
-            text.delete(1.0, tk.END)
-            text.insert(tk.END, f.read())
+        # Open the image and display it
+        image = Image.open('Images/' + file)
+        photo = ImageTk.PhotoImage(image)
+        image_label.config(image=photo)
+        image_label.image = photo  # Keep a reference to the image to prevent it from being garbage collected
 
-    # Bind the listbox's selection event to the show_file_contents function
-    listbox.bind('<<ListboxSelect>>', show_file_contents)
+    # Bind the listbox's selection event to the show_image function
+    listbox.bind('<<ListboxSelect>>', show_image)
 
     refresh_button = tk.Button(root, text="Refresh", command=lambda: list_files(listbox))
     refresh_button.pack()
@@ -72,6 +74,7 @@ def create_gui():
     check_selection()
 
     root.mainloop()
+
 
 if __name__ == "__main__":
     gui_thread = threading.Thread(target=create_gui)
