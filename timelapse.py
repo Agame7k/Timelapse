@@ -1,83 +1,73 @@
 import cv2
-import time
-import datetime
-import tkinter as tk
+import glob
 import os
-import threading
+import tkinter as tk
 from PIL import Image, ImageTk
+from threading import Thread
 
-def capture_frames(interval=10, camera_port=0):
-    cap = cv2.VideoCapture(camera_port)
-    frame_count = 0
+# Get list of image files
+image_files = glob.glob('photos/*.jpg')  # adjust the pattern as needed
+image_files.sort(key=os.path.getmtime)
 
-    filename = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') + '.avi'
-    output = 'Videos/' + filename 
+# Get the most recent video file
+video_files = glob.glob('Videos/*.avi')
+if video_files:
+    video_file = max(video_files, key=os.path.getmtime)
+else:
+    video_file = None
 
-    frame_width = int(cap.get(3))
-    frame_height = int(cap.get(4))
-    fps = 24.0
+root = tk.Tk()
+root.attributes('-fullscreen', True)
 
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter(output, fourcc, fps, (frame_width, frame_height))
+# Create a canvas to display the image and video
+canvas = tk.Canvas(root, width=root.winfo_screenwidth(), height=root.winfo_screenheight())
+canvas.pack()
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+def update_image():
+    if image_files:
+        # Display the next image
+        image_file = image_files.pop(0)
+        image = Image.open(image_file)
 
-        out.write(frame)
-        time.sleep(interval)
-
-    cap.release()
-    out.release()
-
-def list_files(listbox):
-    listbox.delete(0, tk.END)
-    for file in os.listdir('Videos'):
-        listbox.insert(tk.END, file)
-
-def create_gui():
-    root = tk.Tk()
-    root.title("Image Files")
-
-    listbox = tk.Listbox(root)
-    listbox.pack(pady=15)
-
-    # Create a label to display the image
-    image_label = tk.Label(root)
-    image_label.pack()
-
-    def show_image(event):
-        # Get the selected file
-        file = listbox.get(listbox.curselection())
-
-        # Open the image and display it
-        image = Image.open('Images/' + file)
+        # Resize the image to fit the window
+        image = image.resize((root.winfo_screenwidth(), root.winfo_screenheight()))
         photo = ImageTk.PhotoImage(image)
-        image_label.config(image=photo)
-        image_label.image = photo  # Keep a reference to the image to prevent it from being garbage collected
+        canvas.create_image(0, 0, anchor='nw', image=photo)
+        canvas.image = photo
 
-    # Bind the listbox's selection event to the show_image function
-    listbox.bind('<<ListboxSelect>>', show_image)
+        # Schedule the next update
+        root.after(5000, update_image)  # adjust the delay as needed
+    else:
+        # Play the video
+        # Play the video
+        if video_file is not None:
+            cap = cv2.VideoCapture(video_file)
+            if not cap.isOpened():
+                print(f"Could not open video file {video_file}")
+                return
 
-    refresh_button = tk.Button(root, text="Refresh", command=lambda: list_files(listbox))
-    refresh_button.pack()
+            while True:
+                ret, frame = cap.read()
+                if ret:
+                    # Resize the frame to fit the window
+                    frame = cv2.resize(frame, (root.winfo_screenwidth(), root.winfo_screenheight()))
 
-    list_files(listbox)
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    photo = ImageTk.PhotoImage(image=Image.fromarray(frame))
+                    canvas.create_image(0, 0, anchor='nw', image=photo)
+                    canvas.image = photo
+                    root.update()
+                else:
+                    break
+            cap.release()
+        else:
+            print("No video files found.")
 
-    def check_selection():
-        selection = listbox.curselection()
-        if selection and selection[0] == listbox.size() - 1:
-            list_files(listbox)
-        root.after(1000, check_selection)
+        # Start over with the first image
+        image_files.extend(glob.glob('photos/*.jpg'))
+        image_files.sort(key=os.path.getmtime)
+        update_image()
 
-    check_selection()
+update_image()
 
-    root.mainloop()
-
-
-if __name__ == "__main__":
-    gui_thread = threading.Thread(target=create_gui)
-    gui_thread.start()
-
-    capture_frames()
+root.mainloop()
