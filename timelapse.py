@@ -1,20 +1,21 @@
 import cv2
 import time
 import datetime
+import tkinter as tk
+import os
+import threading
 
-def capture_frames(interval=10, camera_port=0, output='timelapse.avi'):
+def capture_frames(interval=10, camera_port=0):
     cap = cv2.VideoCapture(camera_port)
     frame_count = 0
 
     filename = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') + '.avi'
     output = 'Videos/' + filename 
 
-    # Get the frame's width, height, and frames per second
     frame_width = int(cap.get(3))
     frame_height = int(cap.get(4))
     fps = 24.0
 
-    # Define the codec and create a VideoWriter object
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     out = cv2.VideoWriter(output, fourcc, fps, (frame_width, frame_height))
 
@@ -23,15 +24,41 @@ def capture_frames(interval=10, camera_port=0, output='timelapse.avi'):
         if not ret:
             break
 
-        # Write the frame into the file 'output'
         out.write(frame)
-
-        # Wait for the specified interval
         time.sleep(interval)
 
-    # Release everything when the job is finished
     cap.release()
     out.release()
 
+def list_files(listbox):
+    listbox.delete(0, tk.END)
+    for file in os.listdir('Videos'):
+        listbox.insert(tk.END, file)
+
+def create_gui():
+    root = tk.Tk()
+    root.title("Video Files")
+
+    listbox = tk.Listbox(root)
+    listbox.pack(pady=15)
+
+    refresh_button = tk.Button(root, text="Refresh", command=lambda: list_files(listbox))
+    refresh_button.pack()
+
+    list_files(listbox)
+
+    def check_selection():
+        selection = listbox.curselection()
+        if selection and selection[0] == listbox.size() - 1:
+            list_files(listbox)
+        root.after(1000, check_selection)
+
+    check_selection()
+
+    root.mainloop()
+
 if __name__ == "__main__":
+    gui_thread = threading.Thread(target=create_gui)
+    gui_thread.start()
+
     capture_frames()
