@@ -1,9 +1,13 @@
 import cv2
 import time
+import datetime
 
 def capture_frames(interval=10, camera_port=0, output='timelapse.avi'):
     cap = cv2.VideoCapture(camera_port)
     frame_count = 0
+
+    filename = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') + '.avi'
+    output = 'Videos/' + filename 
 
     # Get the frame's width, height, and frames per second
     frame_width = int(cap.get(3))
