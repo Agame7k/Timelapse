@@ -42,6 +42,22 @@ def create_gui():
     listbox = tk.Listbox(root)
     listbox.pack(pady=15)
 
+    # Create a text widget to display the file contents
+    text = tk.Text(root)
+    text.pack()
+
+    def show_file_contents(event):
+        # Get the selected file
+        file = listbox.get(listbox.curselection())
+
+        # Open the file and display its contents
+        with open('Videos/' + file, 'r') as f:
+            text.delete(1.0, tk.END)
+            text.insert(tk.END, f.read())
+
+    # Bind the listbox's selection event to the show_file_contents function
+    listbox.bind('<<ListboxSelect>>', show_file_contents)
+
     refresh_button = tk.Button(root, text="Refresh", command=lambda: list_files(listbox))
     refresh_button.pack()
 
