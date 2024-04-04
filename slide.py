@@ -1,66 +1,33 @@
 import cv2
-import glob
-import os
-import tkinter as tk
-from PIL import Image, ImageTk
-from threading import Thread
+import time
 
-# Get list of image files
-image_files = glob.glob('photos/*.jpg')  # adjust the pattern as needed
-image_files.sort(key=os.path.getmtime)
+def capture_frames(interval=10, camera_port=0, output='timelapse.avi'):
+    cap = cv2.VideoCapture(camera_port)
+    frame_count = 0
 
-# Get the most recent video file
-video_files = glob.glob('Videos/*.avi')
-if video_files:
-    video_file = max(video_files, key=os.path.getmtime)
-else:
-    video_file = None
+    # Get the frame's width, height, and frames per second
+    frame_width = int(cap.get(3))
+    frame_height = int(cap.get(4))
+    fps = 24.0
 
-root = tk.Tk()
-root.attributes('-fullscreen', True)
+    # Define the codec and create a VideoWriter object
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter(output, fourcc, fps, (frame_width, frame_height))
 
-# Create a canvas to display the image and video
-canvas = tk.Canvas(root, width=root.winfo_screenwidth(), height=root.winfo_screenheight())
-canvas.pack()
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-def update_image():
-    if image_files:
-        # Display the next image
-        image_file = image_files.pop(0)
-        image = Image.open(image_file)
-        photo = ImageTk.PhotoImage(image)
-        canvas.create_image(0, 0, anchor='nw', image=photo)
-        canvas.image = photo
+        # Write the frame into the file 'output'
+        out.write(frame)
 
-        # Schedule the next update
-        root.after(5000, update_image)  # adjust the delay as needed
-    else:
-        # Play the video
-        if video_file is not None:
-            cap = cv2.VideoCapture(video_file)
-            if not cap.isOpened():
-                print(f"Could not open video file {video_file}")
-                return
+        # Wait for the specified interval
+        time.sleep(interval)
 
-            while True:
-                ret, frame = cap.read()
-                if ret:
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    photo = ImageTk.PhotoImage(image=Image.fromarray(frame))
-                    canvas.create_image(0, 0, anchor='nw', image=photo)
-                    canvas.image = photo
-                    root.update()
-                else:
-                    break
-            cap.release()
-        else:
-            print("No video files found.")
+    # Release everything when the job is finished
+    cap.release()
+    out.release()
 
-        # Start over with the first image
-        image_files.extend(glob.glob('photos/*.jpg'))
-        image_files.sort(key=os.path.getmtime)
-        update_image()
-
-update_image()
-
-root.mainloop()
+if __name__ == "__main__":
+    capture_frames()

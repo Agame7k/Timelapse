@@ -10,7 +10,7 @@ image_files = glob.glob('photos/*.jpg')  # adjust the pattern as needed
 image_files.sort(key=os.path.getmtime)
 
 # Get the most recent video file
-video_files = glob.glob('Videos/*.avi')
+video_files = glob.glob('*.avi')
 if video_files:
     video_file = max(video_files, key=os.path.getmtime)
 else:
