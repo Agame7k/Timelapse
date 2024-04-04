@@ -55,7 +55,7 @@ def update_image():
                 if ret:
                     # Skip every other frame
                     frame_count += 1
-                    if frame_count % 2 != 0:
+                    if frame_count % 4 != 0:
                         continue
 
                     # Resize the frame to fit the window
