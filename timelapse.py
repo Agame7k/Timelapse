@@ -10,7 +10,7 @@ image_files = glob.glob('photos/*.jpg')  # adjust the pattern as needed
 image_files.sort(key=os.path.getmtime)
 
 # Get the most recent video file
-video_files = glob.glob('*.avi')
+video_files = glob.glob('Videos/*.avi')
 if video_files:
     video_file = max(video_files, key=os.path.getmtime)
 else:
@@ -30,7 +30,8 @@ def update_image():
         image = Image.open(image_file)
 
         # Resize the image to fit the window
-        image = image.resize((root.winfo_screenwidth(), root.winfo_screenheight()))
+        image = image.resize((root.winfo_screenwidth(), root.winfo_screenheight()), Image.LANCZOS)
+
         photo = ImageTk.PhotoImage(image)
         canvas.create_image(0, 0, anchor='nw', image=photo)
         canvas.image = photo
@@ -39,29 +40,40 @@ def update_image():
         root.after(5000, update_image)  # adjust the delay as needed
     else:
         # Play the video
-        # Play the video
         if video_file is not None:
             cap = cv2.VideoCapture(video_file)
             if not cap.isOpened():
                 print(f"Could not open video file {video_file}")
                 return
 
+            # Create an image on the canvas to update for each frame
+            photo_image = None
+
+            frame_count = 0
             while True:
                 ret, frame = cap.read()
                 if ret:
+                    # Skip every other frame
+                    frame_count += 1
+                    if frame_count % 2 != 0:
+                        continue
+
                     # Resize the frame to fit the window
                     frame = cv2.resize(frame, (root.winfo_screenwidth(), root.winfo_screenheight()))
 
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     photo = ImageTk.PhotoImage(image=Image.fromarray(frame))
-                    canvas.create_image(0, 0, anchor='nw', image=photo)
+
+                    if photo_image is None:
+                        photo_image = canvas.create_image(0, 0, anchor='nw', image=photo)
+                    else:
+                        canvas.itemconfig(photo_image, image=photo)
+
                     canvas.image = photo
                     root.update()
                 else:
                     break
             cap.release()
-        else:
-            print("No video files found.")
 
         # Start over with the first image
         image_files.extend(glob.glob('photos/*.jpg'))
